@@ -40,6 +40,48 @@ Stack 2-3: each is an independent catch attempt, and you only pay the one
 that actually wins."""
 PENDING_DELETE_DAYS = 5  # ICANN Pending Delete
 
+# Date-triggered reminders. These fire on the calendar alone -- they do NOT
+# depend on the domain's status, so an RDAP outage can't swallow the deadline.
+# Times are UTC; 04:00 UTC == 09:30 IST, the user's morning.
+CALENDAR_REMINDERS = [
+    {
+        "id": "2026-10-13-heads-up",
+        "at": "2026-10-13T04:00:00+00:00",
+        "title": "snapshrinkimg.com: 4 days to decide",
+        "priority": "high",
+        "tags": "calendar,hourglass",
+        "body": (
+            "Decision point is 2026-10-17. Two things happen that day:\n\n"
+            "  1. LAST DAY to restore via Hostinger for $118.23 (guaranteed).\n"
+            "  2. FIRST DAY the name can be backordered (it enters pendingDelete,\n"
+            "     which fixes the drop date ~5 days out).\n\n"
+            "Nothing to do yet -- just don't let it pass unnoticed."
+        ),
+    },
+    {
+        "id": "2026-10-17-place-backorders",
+        "at": "2026-10-17T04:00:00+00:00",
+        "title": "PLACE THE BACKORDERS TODAY",
+        "priority": "urgent",
+        "tags": "rotating_light,calendar",
+        "body": (
+            "snapshrinkimg.com -- decision day.\n\n"
+            "OPTION A -- guaranteed, and it expires TODAY:\n"
+            "  Restore via Hostinger for $118.23. After today this is gone.\n\n"
+            "OPTION B -- the gamble (~$25 if it works, $0 if it doesn't):\n"
+            "  Place backorders now. Stack both; only the winner charges you:\n"
+            "    Dynadot   ~$24.99  pay-on-success\n"
+            "      https://www.dynadot.com/market/backorder\n"
+            "    DropCatch ~$59     pay-on-success\n"
+            "      https://www.dropcatch.com\n\n"
+            "Check the live status first:\n"
+            "  https://github.com/webfromdev/snapshrinkimg-domain-watch/actions\n\n"
+            "If it has NOT entered pendingDelete yet, the backorder services may\n"
+            "still not list it -- retry each morning until they do."
+        ),
+    },
+]
+
 STAGE_ORDER = {
     "ACTIVE": 0,
     "GRACE": 1,
@@ -511,6 +553,22 @@ def main():
         if not last_beat or (now - dt.datetime.fromisoformat(last_beat)).days >= 1:
             should = True
             print("(sending daily heartbeat)")
+
+    # --- date-triggered reminders (status-independent) ----------------------
+    sent_ids = prev.setdefault("reminders_sent", [])
+    for rem in CALENDAR_REMINDERS:
+        due = dt.datetime.fromisoformat(rem["at"])
+        if now >= due and rem["id"] not in sent_ids:
+            print(f"--- calendar reminder: {rem['id']} ---")
+            rbody = rem["body"] + f"\n\nCurrent registry stage: {stage}"
+            print(notify_ntfy(os.environ.get("NTFY_TOPIC"), rem["title"], rbody,
+                              rem["priority"], rem["tags"],
+                              "https://www.dynadot.com/market/backorder"))
+            print(notify_macos(rem["title"], rbody,
+                               speak=(rem["priority"] == "urgent")))
+            print(notify_email(rem["title"], rbody))
+            print(notify_github_issue(rem["title"], rbody))
+            sent_ids.append(rem["id"])
 
     title, body, priority, tags, _urg = build_message(
         domain, stage, statuses, events, drop_at, confidence
