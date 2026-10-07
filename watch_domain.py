@@ -32,6 +32,12 @@ TIMEOUT = 25
 # ~2:00-2:30 PM US Eastern == 18:00-20:00 UTC depending on DST.
 DROP_WINDOW_UTC = (18, 20)
 REDEMPTION_DAYS = 30   # ICANN Redemption Grace Period
+# Pay-on-success unless noted. GoDaddy retired backorders in Oct 2025.
+BACKORDER_SERVICES = """  Dynadot   ~$24.99  pay-on-success  https://www.dynadot.com/market/backorder
+  DropCatch ~$59     pay-on-success  https://www.dropcatch.com
+  SnapNames ~$69-79  upfront         https://www.snapnames.com
+Stack 2-3: each is an independent catch attempt, and you only pay the one
+that actually wins."""
 PENDING_DELETE_DAYS = 5  # ICANN Pending Delete
 
 STAGE_ORDER = {
@@ -209,6 +215,14 @@ def classify(found, data):
         if age < 30:
             stage = "REREGISTERED"
     return stage, statuses, events
+
+
+def restore_deadline(stage, events):
+    """Last day the owner can still pay the registrar to restore it."""
+    if stage != "REDEMPTION":
+        return None
+    changed = events.get("last changed")
+    return changed + dt.timedelta(days=REDEMPTION_DAYS) if changed else None
 
 
 def predict_drop(stage, events):
@@ -389,7 +403,11 @@ def build_message(domain, stage, statuses, events, drop_at, confidence):
             f"Predicted drop: {when} between "
             f"{DROP_WINDOW_UTC[0]:02d}:00 and {DROP_WINDOW_UTC[1]:02d}:00 UTC.\n"
             f"Nobody can register it until then.\n\n"
-            f"Be at your keyboard in that window, or have a backorder placed.\n\n{reg_links}"
+            f"*** PLACE BACKORDERS NOW -- the name is listable from today. ***\n"
+            f"{BACKORDER_SERVICES}\n\n"
+            f"Hand-registering at the drop only works if nobody else wants it.\n"
+            f"Restoring via your registrar is NO LONGER POSSIBLE at this stage.\n\n"
+            f"{reg_links}"
         )
         return title, body, "high", "warning,hourglass", 4
 
@@ -403,13 +421,25 @@ def build_message(domain, stage, statuses, events, drop_at, confidence):
 
     if stage == "REDEMPTION":
         drop_s = f"{drop_at:%Y-%m-%d}" if drop_at else "unknown"
-        title = f"{domain}: in redemption"
+        deadline = restore_deadline(stage, events)
+        days_left = (deadline - now).days if deadline else None
+        urgent = days_left is not None and days_left <= 4
+        title = (f"{domain}: {days_left}d left to restore"
+                 if urgent else f"{domain}: in redemption")
         body = (
             f"{domain} is in the Redemption Grace Period.\n"
             f"Still restorable via your registrar (with the redemption fee).\n"
-            f"Predicted public drop: ~{drop_s} (confidence: {confidence}).\n"
+            + (f"LAST DAY TO RESTORE: {deadline:%Y-%m-%d} ({days_left} days left).\n"
+               if deadline else "")
+            + f"Predicted public drop: ~{drop_s} (confidence: {confidence}).\n"
         )
-        return title, body, "default", "hourglass", 2
+        if urgent:
+            body += (
+                f"\nAfter the restore deadline the only routes are a backorder "
+                f"or winning the open drop:\n{BACKORDER_SERVICES}\n"
+            )
+        return (title, body, "high" if urgent else "default",
+                "rotating_light" if urgent else "hourglass", 4 if urgent else 2)
 
     title = f"{domain}: status {stage}"
     body = f"Registry status: {statuses or stage}\nChecked {now:%Y-%m-%d %H:%M} UTC."
@@ -446,6 +476,7 @@ def main():
             note = f"{note} | recheck: {note2} | whois_free={w}"
 
     drop_at, confidence = predict_drop(stage, events)
+    deadline = restore_deadline(stage, events)
 
     prev = load_state(args.state)
     prev_stage = prev.get("stage", "NONE")
@@ -458,6 +489,9 @@ def main():
     print(f"statuses    : {', '.join(statuses) if statuses else '-'}")
     for k, v in sorted(events.items()):
         print(f"  {k:<30} {v:%Y-%m-%d %H:%M} UTC")
+    if deadline:
+        print(f"restore deadline: {deadline:%Y-%m-%d} "
+              f"({(deadline - now).days} days left to pay the registrar)")
     if drop_at:
         days = (drop_at - now).days
         print(f"predicted drop: {drop_at:%Y-%m-%d} "
@@ -468,6 +502,9 @@ def main():
     should = args.force_notify or stage == "AVAILABLE" or (
         changed and stage not in ("UNKNOWN",)
     )
+    # Escalate daily once the restore window is nearly shut.
+    if deadline and 0 <= (deadline - now).days <= 4:
+        should = True
     # Daily heartbeat so you know the watcher is alive.
     if not should and not args.quiet_ok:
         last_beat = prev.get("last_heartbeat")
@@ -500,6 +537,7 @@ def main():
         "statuses": statuses,
         "last_checked": now.isoformat(),
         "predicted_drop": drop_at.isoformat() if drop_at else None,
+        "restore_deadline": deadline.isoformat() if deadline else None,
         "confidence": confidence,
         "lookup_note": note,
     })

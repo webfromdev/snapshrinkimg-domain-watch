@@ -47,6 +47,34 @@ Three options, honestly:
 Options 2 and 3 combine well — run both. The watcher costs nothing either way,
 and it also tells you if someone else takes the name.
 
+## Backorders — and why you can't place one yet
+
+Checked 2026-10-07: `snapshrinkimg.com` is **not yet listed** on any backorder
+service. Dynadot's backorder CSV returns zero rows for it, and Namecheap shows it
+only as "registered", with no backorder offered.
+
+That's expected. Backorder inventories populate when the **drop date becomes
+known** — that is, when the domain enters `pendingDelete`, not during redemption.
+For this domain that's **~2026-10-17**, which still leaves 5 days before the drop
+— enough time to place one.
+
+GoDaddy is not an option: it retired backorders on 2025-10-07.
+
+| Service | .com price | Billing | If two people want it |
+|---|---|---|---|
+| [Dynadot](https://www.dynadot.com/market/backorder) | ~$24.99 | **pay-on-success** | private backorder auction |
+| [DropCatch](https://www.dropcatch.com) | ~$59 | **pay-on-success** | public auction |
+| [SnapNames](https://www.snapnames.com) / NameJet | ~$69–79 | upfront | private auction among backorderers |
+
+Stacking two or three is reasonable: each runs its own catch attempt with its own
+pool of registrar connections, and the pay-on-success ones cost nothing if they
+lose. Only one can win, so you won't be charged twice for the name.
+
+**The plan this repo implements:** the watcher alerts the moment the status flips
+to `pendingDelete`, and that alert carries the backorder links and prices. It also
+escalates to a loud daily alert in the last 4 days before the restore deadline, so
+the $118.23 option doesn't quietly expire while you're deciding.
+
 ## Setup (GitHub Actions — runs without your computer)
 
 1. Push this folder to a **public** GitHub repo.
