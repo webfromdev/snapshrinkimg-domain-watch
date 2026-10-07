@@ -1,0 +1,20 @@
+{
+  "confidence": "medium",
+  "domain": "snapshrinkimg.com",
+  "history": [
+    {
+      "at": "2026-10-07T03:44:32.813453+00:00",
+      "from": "NONE",
+      "to": "REDEMPTION"
+    }
+  ],
+  "last_checked": "2026-10-07T03:44:32.813453+00:00",
+  "last_heartbeat": "2026-10-07T03:44:32.813453+00:00",
+  "lookup_note": "200 from https://rdap.verisign.com/com/v1/domain/snapshrinkimg.com",
+  "predicted_drop": "2026-10-22T09:06:42+00:00",
+  "stage": "REDEMPTION",
+  "statuses": [
+    "client transfer prohibited",
+    "redemption period"
+  ]
+}

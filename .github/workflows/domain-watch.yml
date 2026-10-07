@@ -1,0 +1,72 @@
+name: Domain drop watch
+
+on:
+  schedule:
+    # Baseline sweep: every 30 minutes, around the clock.
+    - cron: '*/30 * * * *'
+    # Verisign releases dropped .com names in a daily batch roughly
+    # 18:00-20:00 UTC. Poll every 5 minutes across a padded window.
+    - cron: '*/5 17-21 * * *'
+  workflow_dispatch:        # lets you run it by hand from the Actions tab
+
+permissions:
+  contents: write           # to commit state.json (also keeps the repo "active")
+  issues: write             # alerts are filed as issues -> GitHub emails you
+
+concurrency:
+  group: domain-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check registry status
+        id: check
+        env:
+          WATCH_DOMAIN: ${{ vars.WATCH_DOMAIN || 'snapshrinkimg.com' }}
+          NTFY_TOPIC:   ${{ secrets.NTFY_TOPIC }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SMTP_HOST:    ${{ secrets.SMTP_HOST }}
+          SMTP_PORT:    ${{ secrets.SMTP_PORT }}
+          SMTP_USER:    ${{ secrets.SMTP_USER }}
+          SMTP_PASS:    ${{ secrets.SMTP_PASS }}
+          MAIL_TO:      ${{ secrets.MAIL_TO }}
+        run: |
+          set +e
+          python3 watch_domain.py --state state.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" = "42" ]; then
+            echo "::notice title=DOMAIN AVAILABLE::Register it now."
+          fi
+
+      - name: Persist state
+        run: |
+          # Commit only when the stage actually changed, or once a day, so the
+          # history stays readable. The daily commit also stops GitHub from
+          # auto-disabling this scheduled workflow after 60 days of inactivity.
+          NEW_STAGE=$(python3 -c "import json;print(json.load(open('state.json'))['stage'])")
+          OLD_STAGE=$(git show HEAD:state.json 2>/dev/null \
+            | python3 -c "import json,sys;print(json.load(sys.stdin)['stage'])" 2>/dev/null || echo NONE)
+          TODAY=$(date -u +%F)
+          PREV_BEAT=$(cat heartbeat.txt 2>/dev/null || echo none)
+
+          if [ "$NEW_STAGE" != "$OLD_STAGE" ] || [ "$TODAY" != "$PREV_BEAT" ]; then
+            echo "$TODAY" > heartbeat.txt
+            git config user.name  "domain-watch[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add state.json heartbeat.txt
+            git commit -m "watch: $OLD_STAGE -> $NEW_STAGE ($TODAY)" || exit 0
+            git push
+          else
+            echo "No stage change and already beat today; nothing to commit."
+          fi
