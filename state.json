@@ -8,11 +8,13 @@
       "to": "REDEMPTION"
     }
   ],
-  "last_checked": "2026-10-13T02:08:50.881591+00:00",
-  "last_heartbeat": "2026-10-13T02:08:50.881591+00:00",
+  "last_checked": "2026-10-14T00:39:10.910287+00:00",
+  "last_heartbeat": "2026-10-14T00:39:10.910287+00:00",
   "lookup_note": "200 from https://rdap.verisign.com/com/v1/domain/snapshrinkimg.com",
   "predicted_drop": "2026-10-22T09:06:42+00:00",
-  "reminders_sent": [],
+  "reminders_sent": [
+    "2026-10-13-heads-up"
+  ],
   "restore_deadline": "2026-10-17T09:06:42+00:00",
   "stage": "REDEMPTION",
   "statuses": [
