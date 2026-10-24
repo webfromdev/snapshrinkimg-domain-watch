@@ -1,5 +1,5 @@
 {
-  "confidence": "high",
+  "confidence": "none",
   "domain": "snapshrinkimg.com",
   "history": [
     {
@@ -11,20 +11,22 @@
       "at": "2026-10-18T11:28:03.307767+00:00",
       "from": "REDEMPTION",
       "to": "PENDING_DELETE"
+    },
+    {
+      "at": "2026-10-24T13:43:27.096282+00:00",
+      "from": "PENDING_DELETE",
+      "to": "AVAILABLE"
     }
   ],
-  "last_checked": "2026-10-24T00:53:01.846788+00:00",
-  "last_heartbeat": "2026-10-24T00:53:01.846788+00:00",
-  "lookup_note": "200 from https://rdap.verisign.com/com/v1/domain/snapshrinkimg.com",
-  "predicted_drop": "2026-10-23T09:25:30+00:00",
+  "last_checked": "2026-10-24T13:43:27.096282+00:00",
+  "last_heartbeat": "2026-10-24T13:43:27.096282+00:00",
+  "lookup_note": "404 from https://rdap.verisign.com/com/v1/domain/snapshrinkimg.com (registry reports no such domain)",
+  "predicted_drop": null,
   "reminders_sent": [
     "2026-10-13-heads-up",
     "2026-10-17-place-backorders"
   ],
   "restore_deadline": null,
-  "stage": "PENDING_DELETE",
-  "statuses": [
-    "client transfer prohibited",
-    "pending delete"
-  ]
+  "stage": "AVAILABLE",
+  "statuses": []
 }
