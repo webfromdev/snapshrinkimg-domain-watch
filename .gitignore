@@ -4,3 +4,32 @@ __pycache__/
 *.pyc
 .DS_Store
 ntfy-topic.txt
+
+# ---- added by backup-projects.sh ----
+node_modules/
+vendor/
+Pods/
+.dart_tool/
+venv/
+__pycache__/
+*.pyc
+build/
+dist/
+.next/
+out/
+DerivedData/
+*.apk
+*.ipa
+
+# secrets - NEVER commit
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.keystore
+*.jks
+*serviceAccount*.json
+
+.DS_Store
+*.log
